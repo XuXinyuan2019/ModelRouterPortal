@@ -6,7 +6,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import GuidePage from "./pages/GuidePage";
 import DashboardPage from "./pages/DashboardPage";
+import ModelMarketPage from "./pages/ModelMarketPage";
+import ModelDetailPage from "./pages/ModelDetailPage";
 
 export default function App() {
   return (
@@ -15,6 +18,7 @@ export default function App() {
         <AuthProvider>
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<GuidePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
@@ -27,8 +31,9 @@ export default function App() {
               }
             >
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/models" element={<ModelMarketPage />} />
+              <Route path="/models/:modelId" element={<ModelDetailPage />} />
               {/* Placeholder routes for future phases */}
-              <Route path="/models" element={<DashboardPage />} />
               <Route path="/api-keys" element={<DashboardPage />} />
               <Route path="/balance" element={<DashboardPage />} />
               <Route path="/usage" element={<DashboardPage />} />
@@ -36,7 +41,7 @@ export default function App() {
             </Route>
 
             {/* Default redirect */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>

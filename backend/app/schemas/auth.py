@@ -24,5 +24,6 @@ class UserResponse(BaseModel):
     client_id: int | None
     is_active: bool
     is_admin: bool
+    balance: float
 
     model_config = {"from_attributes": True}

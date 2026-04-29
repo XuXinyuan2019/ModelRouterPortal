@@ -8,6 +8,7 @@ from app.database import init_db
 import app.models  # noqa: F401 — ensure all models are registered before create_all
 from app.routes.auth import router as auth_router
 from app.routes.models import router as models_router
+from app.routes.apikeys import router as apikeys_router
 
 
 @asynccontextmanager
@@ -33,6 +34,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(models_router)
+app.include_router(apikeys_router)
 
 
 @app.get("/api/v1/health")

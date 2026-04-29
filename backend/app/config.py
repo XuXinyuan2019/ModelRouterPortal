@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "sqlite:///./model_router_portal.db"
     FRONTEND_URL: str = "http://localhost:5173"
+    MOCK_MODE: bool = True  # 开发环境使用 mock 数据，无需真实 AccessKey
 
 
 settings = Settings()

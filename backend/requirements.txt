@@ -1,0 +1,14 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sqlalchemy>=2.0
+pydantic>=2.0
+pydantic-settings>=2.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+alibabacloud_aicontent20240611>=7.3.0
+alibabacloud-tea-openapi>=0.3.0
+alibabacloud-tea-util>=0.3.0
+alibabacloud-openapi-util>=0.2.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
+aiosqlite>=0.20.0

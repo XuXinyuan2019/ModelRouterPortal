@@ -60,7 +60,7 @@ export default function BalancePage() {
     setSubmitLoading(true);
     try {
       await submitRecharge(values.amount, values.remark);
-      message.success("充值申请已提交，等待管理员审批");
+      message.success("充值成功");
       setModalOpen(false);
       form.resetFields();
       fetchData();
@@ -195,7 +195,7 @@ export default function BalancePage() {
                 htmlType="submit"
                 loading={submitLoading}
               >
-                提交充值申请
+                确认充值
               </Button>
               <Button onClick={() => setModalOpen(false)}>取消</Button>
             </Space>

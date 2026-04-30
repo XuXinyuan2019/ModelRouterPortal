@@ -1,9 +1,12 @@
 """API Key management service — wraps Alibaba Cloud SDK calls."""
+import logging
 from datetime import datetime
 
 from alibabacloud_aicontent20240611 import models as aicontent_models
 
 from app.services.alicloud_client import get_alicloud_client
+
+logger = logging.getLogger(__name__)
 
 
 def _mask_key(key: str) -> str:
@@ -21,12 +24,27 @@ def create_api_key(client_id: int) -> dict:
     if not body.success:
         raise Exception(body.err_message or "Failed to create API Key")
     data = body.data
+    # Log raw response for debugging
+    raw = data.to_map() if data else {}
+    logger.info("CreateApiKey raw response data: %s", raw)
+
+    # Extract the key - try multiple possible field names
+    api_key = None
+    if data:
+        api_key = getattr(data, "key", None)
+        if api_key is None:
+            # Fallback: check raw map for alternative field names
+            api_key = raw.get("key") or raw.get("apiKey") or raw.get("api_key")
+
+    if api_key is None:
+        logger.warning("API Key created but full key not returned in response. Raw: %s", raw)
+
     return {
-        "id": getattr(data, "id", None),
-        "api_key": getattr(data, "api_key", None),
+        "id": getattr(data, "id", None) if data else None,
+        "api_key": api_key,
         "client_id": client_id,
         "status": "active",
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": (getattr(data, "gmt_create", None) if data else None) or datetime.utcnow().isoformat(),
     }
 
 
@@ -46,18 +64,35 @@ def list_api_keys(client_id: int) -> list[dict]:
     return [
         {
             "id": getattr(item, "id", None),
-            "api_key_preview": _mask_key(getattr(item, "api_key", "")) if getattr(item, "api_key", None) else "sk-****",
-            "status": getattr(item, "status", "active"),
+            "api_key_preview": getattr(item, "key_preview", None) or (_mask_key(getattr(item, "key", "")) if getattr(item, "key", None) else "sk-****"),
+            "status": "active" if not getattr(item, "delete_tag", 0) else "deleted",
             "created_at": getattr(item, "gmt_create", None),
         }
         for item in items
     ]
 
 
+def copy_api_key(key_id: int) -> dict:
+    """Copy (reveal) an API Key by its ID. Returns dict with full key."""
+    client = get_alicloud_client()
+    resp = client.model_router_copy_api_key(str(key_id))
+    body = resp.body
+    if not body or not body.success:
+        raise Exception(body.err_message or "Failed to copy API Key")
+    data = body.data
+    return {
+        "id": getattr(data, "id", None),
+        "api_key": getattr(data, "key", None),
+        "api_key_preview": getattr(data, "key_preview", None),
+        "status": "active" if not getattr(data, "delete_tag", 0) else "deleted",
+        "created_at": getattr(data, "gmt_create", None),
+    }
+
+
 def delete_api_key(key_id: int, client_id: int) -> bool:
     """Delete an API Key by its ID."""
     client = get_alicloud_client()
-    resp = client.model_router_delete_api_key(key_id)
+    resp = client.model_router_delete_api_key(str(key_id))
     body = resp.body
     if not body.success:
         raise Exception(body.err_message or "Failed to delete API Key")

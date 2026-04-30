@@ -21,6 +21,7 @@ import {
 import {
   createApiKey,
   listApiKeys,
+  copyApiKey,
   deleteApiKey,
   type ApiKeyItem,
 } from "../api/apikeys";
@@ -74,6 +75,22 @@ export default function ApiKeysPage() {
     });
   };
 
+  const handleCopyPreview = async (record: ApiKeyItem) => {
+    if (record.id === null) return;
+    try {
+      const result = await copyApiKey(record.id);
+      if (result.api_key) {
+        navigator.clipboard.writeText(result.api_key).then(() => {
+          message.success("完整 API Key 已复制到剪贴板");
+        });
+      } else {
+        message.warning("未能获取完整 API Key");
+      }
+    } catch (err: any) {
+      message.error(err.response?.data?.detail || "复制失败");
+    }
+  };
+
   const columns = [
     {
       title: "API Key",
@@ -102,18 +119,28 @@ export default function ApiKeysPage() {
       key: "action",
       width: 100,
       render: (_: unknown, record: ApiKeyItem) => (
-        <Popconfirm
-          title="确定删除此 API Key?"
-          description="删除后将无法恢复，使用该 Key 的调用将立即失效。"
-          onConfirm={() => record.id !== null && handleDelete(record.id)}
-          okText="删除"
-          cancelText="取消"
-          okButtonProps={{ danger: true }}
-        >
-          <Button type="link" danger icon={<DeleteOutlined />} size="small">
-            删除
+        <Space>
+          <Button
+            type="link"
+            icon={<CopyOutlined />}
+            size="small"
+            onClick={() => handleCopyPreview(record)}
+          >
+            复制
           </Button>
-        </Popconfirm>
+          <Popconfirm
+            title="确定删除此 API Key?"
+            description="删除后将无法恢复，使用该 Key 的调用将立即失效。"
+            onConfirm={() => record.id !== null && handleDelete(record.id)}
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="link" danger icon={<DeleteOutlined />} size="small">
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];

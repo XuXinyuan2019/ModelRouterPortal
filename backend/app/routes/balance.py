@@ -22,13 +22,16 @@ def submit_recharge(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    balance_before = current_user.balance
+    current_user.balance += req.amount
     record = RechargeRecord(
         user_id=current_user.id,
         amount=req.amount,
-        balance_before=current_user.balance,
-        balance_after=current_user.balance,  # updated on approval
-        status="pending",
+        balance_before=balance_before,
+        balance_after=current_user.balance,
+        status="completed",
         remark=req.remark,
+        completed_at=datetime.utcnow(),
     )
     db.add(record)
     db.commit()

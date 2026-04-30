@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class ApiKeyCreateResponse(BaseModel):
     id: int | None
-    api_key: str
+    api_key: str | None
     status: str
     created_at: str
 

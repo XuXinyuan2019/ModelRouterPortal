@@ -44,15 +44,3 @@ class UsageRecordResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class UsageSimulateRequest(BaseModel):
-    model_id: str
-    tokens_input: int = 0
-    tokens_output: int = 0
-
-
-class UsageSimulateResponse(BaseModel):
-    cost: float
-    new_balance: float
-    usage_record_id: int

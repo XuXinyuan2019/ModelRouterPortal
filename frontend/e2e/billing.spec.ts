@@ -14,47 +14,12 @@ test.describe('计费功能 / Billing Feature', () => {
     await expect(page.getByText('计费规则').first()).toBeVisible();
     await expect(page.getByText('Input 价格').first()).toBeVisible();
     await expect(page.getByText('Output 价格').first()).toBeVisible();
-    await expect(page.getByText('/ 1K tokens').first()).toBeVisible();
-  });
-
-  test('模拟调用扣费并更新余额 / Simulate usage deducts balance', async ({ page }) => {
-    await loginUser(page, username, password);
-
-    // Recharge balance first
-    await page.goto('/balance');
-    await waitForPageReady(page);
-    await page.getByRole('button', { name: '模拟充值' }).click();
-    await page.getByRole('spinbutton').fill('100');
-    await page.getByRole('button', { name: '确认充值' }).click();
-    await expect(page.getByText('¥100.00').first()).toBeVisible();
-
-    // Activate model
-    await page.goto('/models/qwen3.6-plus');
-    await waitForPageReady(page);
-    const activateBtn = page.getByRole('button', { name: '开通模型' });
-    if (await activateBtn.isVisible().catch(() => false)) {
-      await activateBtn.click();
-      await expect(page.getByText('模型开通成功').first()).toBeVisible();
-    }
-
-    // Simulate usage
-    await waitForPageReady(page);
-    await page.getByRole('button', { name: '模拟调用并计费' }).click();
-    await expect(page.getByText('模拟调用成功').first()).toBeVisible({ timeout: 5000 });
-
-    // Verify balance decreased on dashboard
-    await page.goto('/dashboard');
-    await waitForPageReady(page);
-    await expect(page.getByText(/当前余额/).first()).toBeVisible();
-    // Balance should be less than 100 after deduction
-    const balanceText = await page.locator('.ant-statistic-content-value-int').first().textContent();
-    expect(balanceText).not.toBe('100');
+    await expect(page.getByText('/ 百万 tokens').first()).toBeVisible();
   });
 
   test('余额不足时显示警告 / Low balance warning shows on dashboard', async ({ page }) => {
     await loginUser(page, username, password);
 
-    // Set balance to low amount by recharging a small amount
     await page.goto('/balance');
     await waitForPageReady(page);
 

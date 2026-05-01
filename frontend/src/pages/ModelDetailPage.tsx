@@ -11,8 +11,6 @@ import {
   message,
   Space,
   Alert,
-  Form,
-  InputNumber,
   Statistic,
   Row,
   Col,
@@ -23,7 +21,6 @@ import {
   StopOutlined,
   CodeOutlined,
   DollarOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
   getModelDetail,
@@ -31,7 +28,6 @@ import {
   deactivateModel,
   type ModelDetail,
 } from "../api/models";
-import { simulateUsage, type UsageSimulateResponse } from "../api/usage";
 
 const { Title, Text } = Typography;
 
@@ -69,9 +65,6 @@ export default function ModelDetailPage() {
   const [model, setModel] = useState<ModelDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [simulateLoading, setSimulateLoading] = useState(false);
-  const [simulateResult, setSimulateResult] = useState<UsageSimulateResponse | null>(null);
-  const [form] = Form.useForm();
 
   const fetchDetail = useCallback(() => {
     if (!modelId) return;
@@ -113,26 +106,6 @@ export default function ModelDetailPage() {
       message.error(detail || "关闭失败");
     } finally {
       setActionLoading(false);
-    }
-  };
-
-  const handleSimulate = async (values: { tokens_input: number; tokens_output: number }) => {
-    if (!modelId) return;
-    setSimulateLoading(true);
-    setSimulateResult(null);
-    try {
-      const result = await simulateUsage({
-        model_id: modelId,
-        tokens_input: values.tokens_input || 0,
-        tokens_output: values.tokens_output || 0,
-      });
-      setSimulateResult(result);
-      message.success(`模拟调用成功，扣费 ¥${result.cost.toFixed(4)}`);
-    } catch (err) {
-      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
-      message.error(detail || "模拟调用失败");
-    } finally {
-      setSimulateLoading(false);
     }
   };
 
@@ -243,7 +216,7 @@ export default function ModelDetailPage() {
                 value={rules.input}
                 precision={4}
                 prefix="¥"
-                suffix="/ 1K tokens"
+                suffix="/ 百万 tokens"
               />
             </Col>
             <Col xs={24} sm={12}>
@@ -252,54 +225,10 @@ export default function ModelDetailPage() {
                 value={rules.output}
                 precision={4}
                 prefix="¥"
-                suffix="/ 1K tokens"
+                suffix="/ 百万 tokens"
               />
             </Col>
           </Row>
-        </Card>
-      )}
-
-      {model.activated && (
-        <Card
-          title={
-            <span>
-              <ThunderboltOutlined style={{ marginRight: 8 }} />
-              模拟调用（演示计费）
-            </span>
-          }
-          style={{ marginTop: 16 }}
-        >
-          <Form form={form} onFinish={handleSimulate} layout="inline">
-            <Form.Item
-              name="tokens_input"
-              label="Input tokens"
-              rules={[{ required: true, message: "请输入" }]}
-              initialValue={1000}
-            >
-              <InputNumber min={0} step={100} style={{ width: 120 }} />
-            </Form.Item>
-            <Form.Item
-              name="tokens_output"
-              label="Output tokens"
-              rules={[{ required: true, message: "请输入" }]}
-              initialValue={500}
-            >
-              <InputNumber min={0} step={100} style={{ width: 120 }} />
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={simulateLoading}>
-                模拟调用并计费
-              </Button>
-            </Form.Item>
-          </Form>
-          {simulateResult && (
-            <Alert
-              style={{ marginTop: 16 }}
-              type="success"
-              message={`扣费成功：¥${simulateResult.cost.toFixed(6)}，余额：¥${simulateResult.new_balance.toFixed(2)}`}
-              showIcon
-            />
-          )}
         </Card>
       )}
 

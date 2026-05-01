@@ -1,22 +1,19 @@
 """Usage & Dashboard routes — real data from usage_records."""
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_current_user, get_db, require_positive_balance
+from app.dependencies import get_current_user, get_db
 from app.models.activation import UserModelActivation
 from app.models.user import User
 from app.schemas.usage import (
     DashboardData,
     ModelUsageItem,
     UsageOverview,
-    UsageSimulateRequest,
-    UsageSimulateResponse,
     UsageTrendItem,
 )
 from app.services import usage_service
-from app.services.billing_service import calculate_cost
 
 router = APIRouter(prefix="/api/v1/usage", tags=["usage"])
 
@@ -46,61 +43,6 @@ def usage_by_model(
 ):
     rows = usage_service.get_model_usage(db, current_user.id, days=30)
     return [ModelUsageItem(**r) for r in rows]
-
-
-@router.post("/simulate", response_model=UsageSimulateResponse)
-def simulate_usage(
-    req: UsageSimulateRequest,
-    current_user: User = Depends(require_positive_balance),
-    db: Session = Depends(get_db),
-):
-    """Simulate a model usage call for demonstration and testing."""
-    # Check model is activated
-    activation = (
-        db.query(UserModelActivation)
-        .filter(
-            UserModelActivation.user_id == current_user.id,
-            UserModelActivation.model_id == req.model_id,
-            UserModelActivation.status == "active",
-        )
-        .first()
-    )
-    if not activation:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="模型未开通 / Model not activated",
-        )
-
-    # Calculate cost
-    cost = calculate_cost(req.model_id, req.tokens_input, req.tokens_output)
-
-    # Deduct balance
-    success = usage_service.deduct_balance(db, current_user, cost)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="余额不足 / Insufficient balance",
-        )
-
-    # Record usage
-    record = usage_service.record_usage(
-        db,
-        user_id=current_user.id,
-        model_id=req.model_id,
-        tokens_input=req.tokens_input,
-        tokens_output=req.tokens_output,
-        cost=cost,
-        request_type="simulate",
-    )
-
-    # Enforce balance limit (disable API keys if zero)
-    usage_service.check_and_enforce_balance_limit(db, current_user)
-
-    return UsageSimulateResponse(
-        cost=cost,
-        new_balance=current_user.balance,
-        usage_record_id=record.id,
-    )
 
 
 # Dashboard endpoint — aggregates key metrics

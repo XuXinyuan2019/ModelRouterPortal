@@ -1,7 +1,7 @@
 """Billing service — fetches pricing rules from Alibaba Cloud and calculates costs."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from alibabacloud_aicontent20240611 import models as aicontent_models
@@ -15,17 +15,50 @@ _billing_rules_cache: dict[str, Any] | None = None
 _cache_timestamp: datetime | None = None
 _CACHE_TTL_SECONDS = 300
 
-# Fallback mock pricing (¥ per 1M tokens) for development / testing
-_FALLBACK_PRICING: dict[str, dict[str, float]] = {
-    "qwen3.6-plus": {"input": 15.0, "output": 30.0},
-    "qwen3-max": {"input": 20.0, "output": 40.0},
-    "kimi-k2.6": {"input": 10.0, "output": 20.0},
-    "deepseek-v4-pro": {"input": 5.0, "output": 15.0},
+# Fallback pricing (¥ per 1M tokens, first tier) — matches Alibaba Cloud config
+_FALLBACK_PRICING: dict[str, dict[str, Any]] = {
+    "qwen3.6-plus": {
+        "tiers": [
+            {"input_price": 2.0, "output_price": 12.0, "min_tokens": 0, "max_tokens": 256000},
+            {"input_price": 8.0, "output_price": 48.0, "min_tokens": 256000, "max_tokens": 1000000},
+        ],
+    },
+    "qwen3-max": {
+        "tiers": [
+            {"input_price": 2.5, "output_price": 10.0, "min_tokens": 0, "max_tokens": 32000},
+            {"input_price": 4.0, "output_price": 16.0, "min_tokens": 32000, "max_tokens": 128000},
+            {"input_price": 7.0, "output_price": 28.0, "min_tokens": 128000, "max_tokens": 252000},
+        ],
+    },
+    "kimi-k2.6": {
+        "tiers": [
+            {"input_price": 6.5, "output_price": 27.0, "min_tokens": 0, "max_tokens": 0},
+        ],
+    },
+    "deepseek-v4-pro": {
+        "tiers": [
+            {"input_price": 12.0, "output_price": 24.0, "min_tokens": 0, "max_tokens": 0},
+        ],
+    },
 }
 
 
-def fetch_billing_rules() -> dict[str, dict[str, float]]:
-    """Fetch billing rules from Alibaba Cloud with in-memory caching."""
+def _parse_tier(tier: Any) -> dict[str, Any]:
+    """Parse a single pricing tier from SDK response."""
+    return {
+        "input_price": float(getattr(tier, "input_price", 0) or 0),
+        "output_price": float(getattr(tier, "output_price", 0) or 0),
+        "min_tokens": int(getattr(tier, "min_tokens", 0) or 0),
+        "max_tokens": int(getattr(tier, "max_tokens", 0) or 0),
+    }
+
+
+def fetch_billing_rules() -> dict[str, dict[str, Any]]:
+    """Fetch billing rules from Alibaba Cloud with in-memory caching.
+
+    Returns dict keyed by modelCode (e.g. "qwen3.6-plus"), each value contains
+    a "tiers" list with input_price/output_price/min_tokens/max_tokens per tier.
+    """
     global _billing_rules_cache, _cache_timestamp
 
     now = datetime.utcnow()
@@ -42,34 +75,29 @@ def fetch_billing_rules() -> dict[str, dict[str, float]]:
         resp = client.model_router_query_billing_rule_list(req)
         body = resp.body
         if body and body.success and body.data:
-            rules: dict[str, dict[str, float]] = {}
-            data = body.data
-            items = getattr(data, "list", []) or []
+            rules: dict[str, dict[str, Any]] = {}
+            items = getattr(body.data, "list", []) or []
             for item in items:
-                model_id = getattr(item, "model_id", None) or getattr(
-                    item, "modelId", None
+                model_code = getattr(item, "model_code", None) or getattr(
+                    item, "modelCode", None
                 )
-                if model_id:
-                    rules[str(model_id)] = {
-                        "input": float(getattr(item, "input_price", 0) or 0),
-                        "output": float(getattr(item, "output_price", 0) or 0),
-                    }
-            # Only use Alibaba Cloud rules if they contain at least one known model
-            # with non-zero pricing; otherwise fall back to local mock pricing
-            known_models = set(_FALLBACK_PRICING.keys())
-            has_known_model = any(
-                mid in known_models and (r["input"] > 0 or r["output"] > 0)
-                for mid, r in rules.items()
-            )
-            if has_known_model:
+                if not model_code:
+                    continue
+                pricing_config = getattr(item, "pricing_config", None) or getattr(
+                    item, "pricingConfig", None
+                )
+                if not pricing_config:
+                    continue
+                tiers_raw = getattr(pricing_config, "tiers", []) or []
+                tiers = [_parse_tier(t) for t in tiers_raw]
+                if tiers:
+                    rules[str(model_code)] = {"tiers": tiers}
+            if rules:
                 _billing_rules_cache = rules
                 _cache_timestamp = now
                 logger.info("Loaded %d billing rules from Alibaba Cloud", len(rules))
                 return rules
-            logger.warning(
-                "Alibaba Cloud returned %d billing rules but none match local models or have valid pricing, using fallback",
-                len(rules),
-            )
+            logger.warning("Alibaba Cloud returned billing rules but parsing yielded no valid tiers")
     except Exception as e:
         logger.warning(
             "Failed to fetch billing rules from Alibaba Cloud, using fallback: %s", e
@@ -80,15 +108,46 @@ def fetch_billing_rules() -> dict[str, dict[str, float]]:
     return _FALLBACK_PRICING
 
 
-def get_billing_rule_for_model(model_id: str) -> dict[str, float]:
-    """Return pricing rule for a specific model."""
+def get_billing_rule_for_model(model_id: str) -> dict[str, Any]:
+    """Return pricing tiers for a specific model."""
     rules = fetch_billing_rules()
-    return rules.get(model_id, {"input": 0.0, "output": 0.0})
+    return rules.get(model_id, {"tiers": []})
 
 
 def calculate_cost(model_id: str, tokens_input: int, tokens_output: int) -> float:
-    """Calculate cost based on model pricing (per 1M tokens) and token counts."""
+    """Calculate cost based on model tiered pricing (per 1M tokens) and token counts.
+
+    For models with multiple tiers, applies each tier's rate to the portion of
+    tokens that falls within that tier's range.
+    """
     rule = get_billing_rule_for_model(model_id)
-    input_cost = (tokens_input / 1_000_000) * rule.get("input", 0)
-    output_cost = (tokens_output / 1_000_000) * rule.get("output", 0)
-    return round(input_cost + output_cost, 6)
+    tiers = rule.get("tiers", [])
+    if not tiers:
+        return 0.0
+
+    total_input_cost = 0.0
+    total_output_cost = 0.0
+    remaining_input = tokens_input
+    remaining_output = tokens_output
+
+    for tier in tiers:
+        min_tok = tier.get("min_tokens", 0)
+        max_tok = tier.get("max_tokens", 0)
+        tier_capacity = (max_tok - min_tok) if max_tok > 0 else float("inf")
+
+        # Input tokens in this tier
+        if remaining_input > 0:
+            input_in_tier = min(remaining_input, tier_capacity)
+            total_input_cost += (input_in_tier / 1_000_000) * tier.get("input_price", 0)
+            remaining_input -= input_in_tier
+
+        # Output tokens in this tier
+        if remaining_output > 0:
+            output_in_tier = min(remaining_output, tier_capacity)
+            total_output_cost += (output_in_tier / 1_000_000) * tier.get("output_price", 0)
+            remaining_output -= output_in_tier
+
+        if remaining_input <= 0 and remaining_output <= 0:
+            break
+
+    return round(total_input_cost + total_output_cost, 6)

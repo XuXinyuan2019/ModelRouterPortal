@@ -14,7 +14,7 @@ test.describe('计费功能 / Billing Feature', () => {
     await expect(page.getByText('计费规则').first()).toBeVisible();
     await expect(page.getByText('Input 价格').first()).toBeVisible();
     await expect(page.getByText('Output 价格').first()).toBeVisible();
-    await expect(page.getByText('/ 百万 tokens').first()).toBeVisible();
+    await expect(page.getByText('百万 tokens').first()).toBeVisible();
   });
 
   test('余额不足时显示警告 / Low balance warning shows on dashboard', async ({ page }) => {

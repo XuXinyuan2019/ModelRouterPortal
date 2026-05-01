@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -19,7 +20,7 @@ class ModelResponse(BaseModel):
 
 class ModelDetailResponse(ModelResponse):
     activated: bool = False
-    billing_rules: dict[str, float] | None = None
+    billing_rules: dict[str, Any] | None = None
 
 
 class ActivationResponse(BaseModel):

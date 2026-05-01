@@ -199,7 +199,7 @@ export default function ModelDetailPage() {
         </Descriptions>
       </Card>
 
-      {rules && (
+      {rules && rules.tiers.length > 0 && (
         <Card
           title={
             <span>
@@ -209,25 +209,39 @@ export default function ModelDetailPage() {
           }
           style={{ marginTop: 16 }}
         >
+          <p style={{ color: "#888", marginBottom: 16 }}>单位：¥ / 百万 tokens</p>
           <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
-              <Statistic
-                title="Input 价格"
-                value={rules.input}
-                precision={4}
-                prefix="¥"
-                suffix="/ 百万 tokens"
-              />
-            </Col>
-            <Col xs={24} sm={12}>
-              <Statistic
-                title="Output 价格"
-                value={rules.output}
-                precision={4}
-                prefix="¥"
-                suffix="/ 百万 tokens"
-              />
-            </Col>
+            {rules.tiers.map((tier, idx) => {
+              const label = rules.tiers.length === 1
+                ? "统一价格"
+                : tier.max_tokens === 0
+                  ? `≥ ${tier.min_tokens.toLocaleString()} tokens`
+                  : `${tier.min_tokens.toLocaleString()} ~ ${tier.max_tokens.toLocaleString()} tokens`;
+              return (
+                <Col xs={24} sm={rules.tiers.length === 1 ? 12 : 24} md={rules.tiers.length === 1 ? 12 : 12} key={idx}>
+                  <Card size="small" title={label} type="inner">
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Statistic
+                          title="Input"
+                          value={tier.input_price}
+                          precision={2}
+                          prefix="¥"
+                        />
+                      </Col>
+                      <Col span={12}>
+                        <Statistic
+                          title="Output"
+                          value={tier.output_price}
+                          precision={2}
+                          prefix="¥"
+                        />
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+              );
+            })}
           </Row>
         </Card>
       )}

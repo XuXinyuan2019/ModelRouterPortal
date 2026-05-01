@@ -9,6 +9,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.services.client_service import create_cloud_client
 from app.utils.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -30,6 +31,22 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Create Alibaba Cloud client and bind to local user
+    try:
+        cloud_client = create_cloud_client(name=user.display_name or user.username)
+        user.client_id = cloud_client["id"]
+        user.client_uuid = cloud_client["client_uuid"]
+        db.commit()
+        db.refresh(user)
+    except Exception as exc:
+        # Rollback local user if cloud client creation fails
+        db.delete(user)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Failed to create Alibaba Cloud client: {exc}",
+        )
 
     token = create_access_token({"sub": user.id})
     return TokenResponse(access_token=token)

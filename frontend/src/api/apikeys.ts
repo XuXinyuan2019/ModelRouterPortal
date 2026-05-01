@@ -24,6 +24,11 @@ export async function listApiKeys(): Promise<ApiKeyItem[]> {
   return data;
 }
 
+export async function copyApiKey(keyId: number): Promise<ApiKeyCreated> {
+  const { data } = await client.post<ApiKeyCreated>(`/api-keys/${keyId}/copy`);
+  return data;
+}
+
 export async function deleteApiKey(keyId: number): Promise<void> {
   await client.delete(`/api-keys/${keyId}`);
 }

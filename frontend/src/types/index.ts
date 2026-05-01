@@ -5,6 +5,7 @@ export interface UserInfo {
   client_id: number | null;
   is_active: boolean;
   is_admin: boolean;
+  balance: number;
 }
 
 export interface TokenResponse {

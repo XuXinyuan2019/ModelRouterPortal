@@ -47,6 +47,25 @@ export async function getModelUsage(): Promise<ModelUsageItem[]> {
   return data;
 }
 
+export interface UsageSimulateRequest {
+  model_id: string;
+  tokens_input: number;
+  tokens_output: number;
+}
+
+export interface UsageSimulateResponse {
+  cost: number;
+  new_balance: number;
+  usage_record_id: number;
+}
+
+export async function simulateUsage(
+  req: UsageSimulateRequest
+): Promise<UsageSimulateResponse> {
+  const { data } = await client.post<UsageSimulateResponse>("/usage/simulate", req);
+  return data;
+}
+
 export async function getDashboard(): Promise<DashboardData> {
   const { data } = await client.get<DashboardData>("/dashboard/");
   return data;

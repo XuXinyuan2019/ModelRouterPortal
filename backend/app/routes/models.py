@@ -8,6 +8,7 @@ from app.models.activation import UserModelActivation
 from app.models.model import Model
 from app.models.user import User
 from app.schemas.model import ActivationResponse, ModelDetailResponse, ModelResponse
+from app.services.billing_service import get_billing_rule_for_model
 
 router = APIRouter(prefix="/api/v1/models", tags=["models"])
 
@@ -71,6 +72,8 @@ def get_model_detail(
             .first()
         )
         resp.activated = activation is not None
+    # Attach billing rules
+    resp.billing_rules = get_billing_rule_for_model(model_id)
     return resp
 
 

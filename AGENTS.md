@@ -254,6 +254,7 @@ npm run type-check   # TypeScript check
 - 阿里云 AccessKey 只存在后端 .env，绝不暴露给前端
 - UI 组件库使用 Ant Design，图表使用 Recharts
 - 前端状态管理：AuthContext 管理认证状态，其余用组件本地 state + API 调用
+- Issue 和 PR 描述须同时提供中文和英文两个版本（ bilingual ）
 
 ## Branch Strategy & Phased Development
 

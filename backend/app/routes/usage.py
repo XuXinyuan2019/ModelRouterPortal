@@ -1,18 +1,22 @@
-"""Usage & Dashboard routes — real SDK calls (TODO: implement)."""
+"""Usage & Dashboard routes — real data from usage_records."""
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, require_positive_balance
 from app.models.activation import UserModelActivation
 from app.models.user import User
 from app.schemas.usage import (
     DashboardData,
     ModelUsageItem,
     UsageOverview,
+    UsageSimulateRequest,
+    UsageSimulateResponse,
     UsageTrendItem,
 )
-from sqlalchemy.orm import Session
+from app.services import usage_service
+from app.services.billing_service import calculate_cost
 
 router = APIRouter(prefix="/api/v1/usage", tags=["usage"])
 
@@ -20,25 +24,83 @@ router = APIRouter(prefix="/api/v1/usage", tags=["usage"])
 @router.get("/overview", response_model=UsageOverview)
 def usage_overview(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    # TODO: real SDK call
-    return UsageOverview(total_cost=0, total_tokens=0, total_requests=0, period="")
+    data = usage_service.get_usage_overview(db, current_user.id, days=30)
+    return UsageOverview(**data)
 
 
 @router.get("/trend", response_model=list[UsageTrendItem])
 def usage_trend(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    # TODO: real SDK call
-    return []
+    rows = usage_service.get_usage_trend(db, current_user.id, days=7)
+    return [UsageTrendItem(**r) for r in rows]
 
 
 @router.get("/models", response_model=list[ModelUsageItem])
 def usage_by_model(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    # TODO: real SDK call
-    return []
+    rows = usage_service.get_model_usage(db, current_user.id, days=30)
+    return [ModelUsageItem(**r) for r in rows]
+
+
+@router.post("/simulate", response_model=UsageSimulateResponse)
+def simulate_usage(
+    req: UsageSimulateRequest,
+    current_user: User = Depends(require_positive_balance),
+    db: Session = Depends(get_db),
+):
+    """Simulate a model usage call for demonstration and testing."""
+    # Check model is activated
+    activation = (
+        db.query(UserModelActivation)
+        .filter(
+            UserModelActivation.user_id == current_user.id,
+            UserModelActivation.model_id == req.model_id,
+            UserModelActivation.status == "active",
+        )
+        .first()
+    )
+    if not activation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="模型未开通 / Model not activated",
+        )
+
+    # Calculate cost
+    cost = calculate_cost(req.model_id, req.tokens_input, req.tokens_output)
+
+    # Deduct balance
+    success = usage_service.deduct_balance(db, current_user, cost)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="余额不足 / Insufficient balance",
+        )
+
+    # Record usage
+    record = usage_service.record_usage(
+        db,
+        user_id=current_user.id,
+        model_id=req.model_id,
+        tokens_input=req.tokens_input,
+        tokens_output=req.tokens_output,
+        cost=cost,
+        request_type="simulate",
+    )
+
+    # Enforce balance limit (disable API keys if zero)
+    usage_service.check_and_enforce_balance_limit(db, current_user)
+
+    return UsageSimulateResponse(
+        cost=cost,
+        new_balance=current_user.balance,
+        usage_record_id=record.id,
+    )
 
 
 # Dashboard endpoint — aggregates key metrics
@@ -59,10 +121,13 @@ def get_dashboard(
         .count()
     )
 
+    overview = usage_service.get_usage_overview(db, current_user.id, days=30)
+    trend = usage_service.get_usage_trend(db, current_user.id, days=7)
+
     return DashboardData(
         balance=current_user.balance,
-        total_cost_30d=0,
-        total_requests_30d=0,
+        total_cost_30d=overview["total_cost"],
+        total_requests_30d=overview["total_requests"],
         activated_models=activated_count,
-        recent_trend=[],
+        recent_trend=[UsageTrendItem(**r) for r in trend],
     )

@@ -31,6 +31,16 @@ export async function submitRecharge(
   return data;
 }
 
+export interface BalanceStatus {
+  balance: number;
+  restricted: boolean;
+}
+
+export async function getBalanceStatus(): Promise<BalanceStatus> {
+  const { data } = await client.get<BalanceStatus>("/balance/status");
+  return data;
+}
+
 export async function getRechargeHistory(): Promise<RechargeRecord[]> {
   const { data } = await client.get<RechargeRecord[]>("/balance/history");
   return data;

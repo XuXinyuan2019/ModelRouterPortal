@@ -19,6 +19,7 @@ class ModelResponse(BaseModel):
 
 class ModelDetailResponse(ModelResponse):
     activated: bool = False
+    billing_rules: dict[str, float] | None = None
 
 
 class ActivationResponse(BaseModel):

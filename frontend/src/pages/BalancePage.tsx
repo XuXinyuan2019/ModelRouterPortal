@@ -13,13 +13,16 @@ import {
   message,
   Space,
   Spin,
+  Alert,
 } from "antd";
 import { WalletOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   getBalance,
+  getBalanceStatus,
   submitRecharge,
   getRechargeHistory,
   type BalanceInfo,
+  type BalanceStatus,
   type RechargeRecord,
 } from "../api/balance";
 
@@ -33,6 +36,7 @@ const statusMap: Record<string, { color: string; label: string }> = {
 
 export default function BalancePage() {
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
+  const [status, setStatus] = useState<BalanceStatus | null>(null);
   const [records, setRecords] = useState<RechargeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -42,8 +46,13 @@ export default function BalancePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [b, r] = await Promise.all([getBalance(), getRechargeHistory()]);
+      const [b, s, r] = await Promise.all([
+        getBalance(),
+        getBalanceStatus(),
+        getRechargeHistory(),
+      ]);
       setBalance(b);
+      setStatus(s);
       setRecords(r);
     } catch {
       message.error("加载数据失败");
@@ -150,8 +159,17 @@ export default function BalancePage() {
           value={balance?.balance ?? 0}
           precision={2}
           prefix="¥"
-          valueStyle={{ color: "#1677ff", fontSize: 36 }}
+          valueStyle={{ color: status?.restricted ? "#ff4d4f" : "#1677ff", fontSize: 36 }}
         />
+        {status?.restricted && (
+          <Alert
+            message="账户已受限 / Account Restricted"
+            description="余额为 0，API Key 已被禁用。请充值以恢复使用。"
+            type="error"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        )}
       </Card>
 
       <Card title="充值记录">

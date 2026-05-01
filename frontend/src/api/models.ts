@@ -14,6 +14,7 @@ export interface ModelInfo {
 
 export interface ModelDetail extends ModelInfo {
   activated: boolean;
+  billing_rules: { input: number; output: number } | null;
 }
 
 export interface ActivationInfo {

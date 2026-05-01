@@ -7,7 +7,7 @@ class UsageOverview(BaseModel):
     total_cost: float
     total_tokens: int
     total_requests: int
-    period: str  # e.g. "2026-04"
+    period: str  # e.g. "近30日"
 
 
 class UsageTrendItem(BaseModel):
@@ -31,3 +31,28 @@ class DashboardData(BaseModel):
     total_requests_30d: int
     activated_models: int
     recent_trend: list[UsageTrendItem]
+
+
+class UsageRecordResponse(BaseModel):
+    id: int
+    user_id: int
+    model_id: str
+    tokens_input: int
+    tokens_output: int
+    cost: float
+    request_type: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class UsageSimulateRequest(BaseModel):
+    model_id: str
+    tokens_input: int = 0
+    tokens_output: int = 0
+
+
+class UsageSimulateResponse(BaseModel):
+    cost: float
+    new_balance: float
+    usage_record_id: int

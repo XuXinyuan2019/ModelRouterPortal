@@ -141,8 +141,8 @@ export default function UsagePage() {
                 />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: number) => [
-                    `¥ ${value.toFixed(2)}`,
+                  formatter={(value) => [
+                    `¥ ${Number(value).toFixed(2)}`,
                     "费用",
                   ]}
                 />
@@ -167,8 +167,8 @@ export default function UsagePage() {
                 />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: number) => [
-                    value.toLocaleString(),
+                  formatter={(value) => [
+                    Number(value).toLocaleString(),
                     "请求数",
                   ]}
                 />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Typography,
@@ -11,12 +11,19 @@ import {
   message,
   Space,
   Alert,
+  Form,
+  InputNumber,
+  Statistic,
+  Row,
+  Col,
 } from "antd";
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
   StopOutlined,
   CodeOutlined,
+  DollarOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
   getModelDetail,
@@ -24,8 +31,9 @@ import {
   deactivateModel,
   type ModelDetail,
 } from "../api/models";
+import { simulateUsage, type UsageSimulateResponse } from "../api/usage";
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text } = Typography;
 
 const BASE_URL = "https://aicontent.cn-beijing.aliyuncs.com";
 
@@ -61,19 +69,22 @@ export default function ModelDetailPage() {
   const [model, setModel] = useState<ModelDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [simulateLoading, setSimulateLoading] = useState(false);
+  const [simulateResult, setSimulateResult] = useState<UsageSimulateResponse | null>(null);
+  const [form] = Form.useForm();
 
-  const fetchDetail = () => {
+  const fetchDetail = useCallback(() => {
     if (!modelId) return;
     setLoading(true);
     getModelDetail(modelId)
       .then(setModel)
       .catch(() => message.error("加载模型详情失败"))
       .finally(() => setLoading(false));
-  };
+  }, [modelId]);
 
   useEffect(() => {
     fetchDetail();
-  }, [modelId]);
+  }, [fetchDetail]);
 
   const handleActivate = async () => {
     if (!modelId) return;
@@ -82,8 +93,9 @@ export default function ModelDetailPage() {
       await activateModel(modelId);
       message.success("模型开通成功");
       fetchDetail();
-    } catch (err: any) {
-      message.error(err.response?.data?.detail || "开通失败");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      message.error(detail || "开通失败");
     } finally {
       setActionLoading(false);
     }
@@ -96,10 +108,31 @@ export default function ModelDetailPage() {
       await deactivateModel(modelId);
       message.success("模型已关闭");
       fetchDetail();
-    } catch (err: any) {
-      message.error(err.response?.data?.detail || "关闭失败");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      message.error(detail || "关闭失败");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSimulate = async (values: { tokens_input: number; tokens_output: number }) => {
+    if (!modelId) return;
+    setSimulateLoading(true);
+    setSimulateResult(null);
+    try {
+      const result = await simulateUsage({
+        model_id: modelId,
+        tokens_input: values.tokens_input || 0,
+        tokens_output: values.tokens_output || 0,
+      });
+      setSimulateResult(result);
+      message.success(`模拟调用成功，扣费 ¥${result.cost.toFixed(4)}`);
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      message.error(detail || "模拟调用失败");
+    } finally {
+      setSimulateLoading(false);
     }
   };
 
@@ -116,6 +149,7 @@ export default function ModelDetailPage() {
   }
 
   const codes = getCodeExamples(model.model_id);
+  const rules = model.billing_rules;
 
   return (
     <div>
@@ -191,6 +225,83 @@ export default function ModelDetailPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {rules && (
+        <Card
+          title={
+            <span>
+              <DollarOutlined style={{ marginRight: 8 }} />
+              计费规则
+            </span>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12}>
+              <Statistic
+                title="Input 价格"
+                value={rules.input}
+                precision={4}
+                prefix="¥"
+                suffix="/ 1K tokens"
+              />
+            </Col>
+            <Col xs={24} sm={12}>
+              <Statistic
+                title="Output 价格"
+                value={rules.output}
+                precision={4}
+                prefix="¥"
+                suffix="/ 1K tokens"
+              />
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {model.activated && (
+        <Card
+          title={
+            <span>
+              <ThunderboltOutlined style={{ marginRight: 8 }} />
+              模拟调用（演示计费）
+            </span>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <Form form={form} onFinish={handleSimulate} layout="inline">
+            <Form.Item
+              name="tokens_input"
+              label="Input tokens"
+              rules={[{ required: true, message: "请输入" }]}
+              initialValue={1000}
+            >
+              <InputNumber min={0} step={100} style={{ width: 120 }} />
+            </Form.Item>
+            <Form.Item
+              name="tokens_output"
+              label="Output tokens"
+              rules={[{ required: true, message: "请输入" }]}
+              initialValue={500}
+            >
+              <InputNumber min={0} step={100} style={{ width: 120 }} />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={simulateLoading}>
+                模拟调用并计费
+              </Button>
+            </Form.Item>
+          </Form>
+          {simulateResult && (
+            <Alert
+              style={{ marginTop: 16 }}
+              type="success"
+              message={`扣费成功：¥${simulateResult.cost.toFixed(6)}，余额：¥${simulateResult.new_balance.toFixed(2)}`}
+              showIcon
+            />
+          )}
+        </Card>
+      )}
 
       <Card
         title={

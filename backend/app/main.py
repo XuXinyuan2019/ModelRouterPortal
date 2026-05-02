@@ -12,6 +12,7 @@ from app.routes.apikeys import router as apikeys_router
 from app.routes.balance import router as balance_router
 from app.routes.usage import router as usage_router, dashboard_router
 from app.routes.settings import router as settings_router
+from app.routes.chat import router as chat_router
 
 
 @asynccontextmanager
@@ -42,6 +43,7 @@ app.include_router(balance_router)
 app.include_router(usage_router)
 app.include_router(dashboard_router)
 app.include_router(settings_router)
+app.include_router(chat_router)
 
 
 @app.get("/api/v1/health")

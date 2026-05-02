@@ -12,8 +12,16 @@ export interface ModelInfo {
   sort_order: number;
 }
 
+export interface BillingTier {
+  input_price: number;
+  output_price: number;
+  min_tokens: number;
+  max_tokens: number;
+}
+
 export interface ModelDetail extends ModelInfo {
   activated: boolean;
+  billing_rules: { tiers: BillingTier[] } | null;
 }
 
 export interface ActivationInfo {

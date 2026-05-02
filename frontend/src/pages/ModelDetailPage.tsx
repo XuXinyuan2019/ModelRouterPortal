@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Typography,
@@ -11,12 +11,16 @@ import {
   message,
   Space,
   Alert,
+  Statistic,
+  Row,
+  Col,
 } from "antd";
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
   StopOutlined,
   CodeOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import {
   getModelDetail,
@@ -25,9 +29,9 @@ import {
   type ModelDetail,
 } from "../api/models";
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text } = Typography;
 
-const BASE_URL = "https://aicontent.cn-beijing.aliyuncs.com";
+const BASE_URL = "https://model-router.edu-aliyun.com";
 
 function getCodeExamples(modelId: string) {
   return {
@@ -35,7 +39,7 @@ function getCodeExamples(modelId: string) {
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="${BASE_URL}/compatible-mode/v1",
+    base_url="${BASE_URL}/v1",
 )
 
 completion = client.chat.completions.create(
@@ -45,7 +49,7 @@ completion = client.chat.completions.create(
     ],
 )
 print(completion.choices[0].message.content)`,
-    curl: `curl -X POST ${BASE_URL}/compatible-mode/v1/chat/completions \\
+    curl: `curl -X POST ${BASE_URL}/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -62,18 +66,18 @@ export default function ModelDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchDetail = () => {
+  const fetchDetail = useCallback(() => {
     if (!modelId) return;
     setLoading(true);
     getModelDetail(modelId)
       .then(setModel)
       .catch(() => message.error("加载模型详情失败"))
       .finally(() => setLoading(false));
-  };
+  }, [modelId]);
 
   useEffect(() => {
     fetchDetail();
-  }, [modelId]);
+  }, [fetchDetail]);
 
   const handleActivate = async () => {
     if (!modelId) return;
@@ -82,8 +86,9 @@ export default function ModelDetailPage() {
       await activateModel(modelId);
       message.success("模型开通成功");
       fetchDetail();
-    } catch (err: any) {
-      message.error(err.response?.data?.detail || "开通失败");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      message.error(detail || "开通失败");
     } finally {
       setActionLoading(false);
     }
@@ -96,8 +101,9 @@ export default function ModelDetailPage() {
       await deactivateModel(modelId);
       message.success("模型已关闭");
       fetchDetail();
-    } catch (err: any) {
-      message.error(err.response?.data?.detail || "关闭失败");
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      message.error(detail || "关闭失败");
     } finally {
       setActionLoading(false);
     }
@@ -116,6 +122,7 @@ export default function ModelDetailPage() {
   }
 
   const codes = getCodeExamples(model.model_id);
+  const rules = model.billing_rules;
 
   return (
     <div>
@@ -191,6 +198,53 @@ export default function ModelDetailPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {rules && rules.tiers.length > 0 && (
+        <Card
+          title={
+            <span>
+              <DollarOutlined style={{ marginRight: 8 }} />
+              计费规则
+            </span>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <p style={{ color: "#888", marginBottom: 16 }}>单位：¥ / 百万 tokens</p>
+          <Row gutter={[16, 16]}>
+            {rules.tiers.map((tier, idx) => {
+              const label = rules.tiers.length === 1
+                ? "统一价格"
+                : tier.max_tokens === 0
+                  ? `≥ ${tier.min_tokens.toLocaleString()} tokens`
+                  : `${tier.min_tokens.toLocaleString()} ~ ${tier.max_tokens.toLocaleString()} tokens`;
+              return (
+                <Col xs={24} sm={rules.tiers.length === 1 ? 12 : 24} md={rules.tiers.length === 1 ? 12 : 12} key={idx}>
+                  <Card size="small" title={label} type="inner">
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Statistic
+                          title="Input"
+                          value={tier.input_price}
+                          precision={2}
+                          prefix="¥"
+                        />
+                      </Col>
+                      <Col span={12}>
+                        <Statistic
+                          title="Output"
+                          value={tier.output_price}
+                          precision={2}
+                          prefix="¥"
+                        />
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        </Card>
+      )}
 
       <Card
         title={

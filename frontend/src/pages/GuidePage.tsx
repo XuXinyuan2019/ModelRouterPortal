@@ -22,13 +22,13 @@ import { listModels, type ModelInfo } from "../api/models";
 
 const { Title, Paragraph, Text } = Typography;
 
-const BASE_URL = "https://aicontent.cn-beijing.aliyuncs.com";
+const BASE_URL = "https://model-router.edu-aliyun.com";
 
 const pythonCode = `from openai import OpenAI
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="${BASE_URL}/compatible-mode/v1",
+    base_url="${BASE_URL}/v1",
 )
 
 completion = client.chat.completions.create(
@@ -39,7 +39,7 @@ completion = client.chat.completions.create(
 )
 print(completion.choices[0].message.content)`;
 
-const curlCode = `curl -X POST ${BASE_URL}/compatible-mode/v1/chat/completions \\
+const curlCode = `curl -X POST ${BASE_URL}/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -50,7 +50,7 @@ const curlCode = `curl -X POST ${BASE_URL}/compatible-mode/v1/chat/completions \
   }'`;
 
 const jsCode = `const response = await fetch(
-  "${BASE_URL}/compatible-mode/v1/chat/completions",
+  "${BASE_URL}/v1/chat/completions",
   {
     method: "POST",
     headers: {
@@ -84,7 +84,7 @@ const faqItems = [
   {
     key: "3",
     label: "API 调用的 Base URL 是什么？",
-    children: `所有模型的 API 调用都通过阿里云 ModelRouter 端点：${BASE_URL}/compatible-mode/v1。认证方式为 Bearer Token（即您的 API Key）。`,
+    children: `所有模型的 API 调用都通过阿里云 ModelRouter 端点：${BASE_URL}/v1。认证方式为 Bearer Token（即您的 API Key）。详细文档请参阅：https://model-router-console.edu-aliyun.com/manual`,
   },
   {
     key: "4",
@@ -163,7 +163,7 @@ export default function GuidePage() {
           <Paragraph style={{ margin: 0 }}>
             <Text strong>Base URL: </Text>
             <Text code copyable>
-              {BASE_URL}/compatible-mode/v1
+              {BASE_URL}/v1
             </Text>
           </Paragraph>
           <Paragraph style={{ margin: "8px 0 0" }}>

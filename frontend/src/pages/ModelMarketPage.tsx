@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Card, Tag, Button, Input, Typography, Row, Col, Spin, message } from "antd";
-import { SearchOutlined, CheckCircleOutlined, RocketOutlined } from "@ant-design/icons";
+import { Card, Tag, Input, Typography, Row, Col, Spin, message } from "antd";
+import { SearchOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { listModels, listActivatedModels, type ModelInfo, type ActivationInfo } from "../api/models";
 

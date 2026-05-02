@@ -20,6 +20,28 @@ export interface ModelUsageItem {
   cost: number;
   tokens: number;
   requests: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface ModelDetailRow {
+  timestamp: string;
+  total_calls: number;
+  all_tokens: number;
+  input_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
+  total_amount: number;
+}
+
+export interface ModelDetailData {
+  rows: ModelDetailRow[];
+  total: number;
+  page: number;
+  page_size: number;
+  model_id: number | null;
+  model_name: string | null;
+  granularity: string;
 }
 
 export interface DashboardData {
@@ -44,6 +66,17 @@ export async function getUsageTrend(days = 7): Promise<UsageTrendItem[]> {
 
 export async function getModelUsage(): Promise<ModelUsageItem[]> {
   const { data } = await client.get<ModelUsageItem[]>("/usage/models");
+  return data;
+}
+
+export async function getModelDetailUsage(
+  modelId: number,
+  days = 30
+): Promise<ModelDetailData> {
+  const { data } = await client.get<ModelDetailData>(
+    `/usage/models/${modelId}`,
+    { params: { days } }
+  );
   return data;
 }
 

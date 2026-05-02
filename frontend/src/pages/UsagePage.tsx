@@ -7,6 +7,7 @@ import {
   Statistic,
   Table,
   Spin,
+  Select,
   message,
 } from "antd";
 import { BarChartOutlined } from "@ant-design/icons";
@@ -25,18 +26,33 @@ import {
   getUsageOverview,
   getUsageTrend,
   getModelUsage,
+  getModelDetailUsage,
   type UsageOverview,
   type UsageTrendItem,
   type ModelUsageItem,
+  type ModelDetailRow,
 } from "../api/usage";
 
 const { Title, Text } = Typography;
+
+const MODEL_ID_MAP: Record<string, number> = {
+  "qwen3.6-plus": 1022,
+  "qwen3-max": 1023,
+  "kimi-k2.6": 1028,
+  "deepseek-v4-pro": 1026,
+};
 
 export default function UsagePage() {
   const [overview, setOverview] = useState<UsageOverview | null>(null);
   const [trend, setTrend] = useState<UsageTrendItem[]>([]);
   const [modelUsage, setModelUsage] = useState<ModelUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Model detail state
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [modelDetail, setModelDetail] = useState<ModelDetailRow[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailModelName, setDetailModelName] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([getUsageOverview(), getUsageTrend(7), getModelUsage()])
@@ -48,6 +64,23 @@ export default function UsagePage() {
       .catch(() => message.error("加载用量数据失败"))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleModelSelect = async (modelId: string) => {
+    const numericId = MODEL_ID_MAP[modelId];
+    if (!numericId) return;
+    setSelectedModel(modelId);
+    setDetailLoading(true);
+    try {
+      const data = await getModelDetailUsage(numericId, 30);
+      setModelDetail(data.rows);
+      setDetailModelName(data.model_name || modelId);
+    } catch {
+      message.error("加载模型明细失败");
+      setModelDetail([]);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -86,6 +119,45 @@ export default function UsagePage() {
       sorter: (a: ModelUsageItem, b: ModelUsageItem) =>
         a.requests - b.requests,
       render: (v: number) => v.toLocaleString(),
+    },
+  ];
+
+  const detailColumns = [
+    {
+      title: "时间",
+      dataIndex: "timestamp",
+      key: "timestamp",
+      render: (v: string) => v.replace("T", " ").slice(0, 16),
+    },
+    {
+      title: "调用次数",
+      dataIndex: "total_calls",
+      key: "total_calls",
+      render: (v: number) => v.toLocaleString(),
+    },
+    {
+      title: "输入 Tokens",
+      dataIndex: "input_tokens",
+      key: "input_tokens",
+      render: (v: number) => v.toLocaleString(),
+    },
+    {
+      title: "输出 Tokens",
+      dataIndex: "output_tokens",
+      key: "output_tokens",
+      render: (v: number) => v.toLocaleString(),
+    },
+    {
+      title: "推理 Tokens",
+      dataIndex: "reasoning_tokens",
+      key: "reasoning_tokens",
+      render: (v: number) => v.toLocaleString(),
+    },
+    {
+      title: "费用",
+      dataIndex: "total_amount",
+      key: "total_amount",
+      render: (v: number) => `¥ ${v.toFixed(4)}`,
     },
   ];
 
@@ -141,8 +213,8 @@ export default function UsagePage() {
                 />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: number) => [
-                    `¥ ${value.toFixed(2)}`,
+                  formatter={(value) => [
+                    `¥ ${Number(value).toFixed(2)}`,
                     "费用",
                   ]}
                 />
@@ -167,8 +239,8 @@ export default function UsagePage() {
                 />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: number) => [
-                    value.toLocaleString(),
+                  formatter={(value) => [
+                    Number(value).toLocaleString(),
                     "请求数",
                   ]}
                 />
@@ -179,13 +251,47 @@ export default function UsagePage() {
         </Col>
       </Row>
 
-      <Card title="模型用量明细">
+      <Card title="模型用量明细" style={{ marginBottom: 24 }}>
         <Table
           columns={modelColumns}
           dataSource={modelUsage}
           rowKey="model_id"
           pagination={false}
         />
+      </Card>
+
+      <Card
+        title={
+          <span>
+            模型调用详情
+            <Select
+              size="small"
+              placeholder="选择模型查看详情"
+              value={selectedModel || undefined}
+              onChange={handleModelSelect}
+              style={{ marginLeft: 12, minWidth: 180 }}
+              options={Object.keys(MODEL_ID_MAP).map((id) => ({
+                value: id,
+                label: id,
+              }))}
+            />
+          </span>
+        }
+      >
+        {selectedModel ? (
+          <Spin spinning={detailLoading}>
+            <Table
+              columns={detailColumns}
+              dataSource={modelDetail}
+              rowKey="timestamp"
+              pagination={{ pageSize: 10 }}
+              size="small"
+              locale={{ emptyText: "暂无数据" }}
+            />
+          </Spin>
+        ) : (
+          <Text type="secondary">请选择一个模型查看调用详情</Text>
+        )}
       </Card>
     </div>
   );

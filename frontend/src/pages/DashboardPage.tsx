@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Col, Row, Statistic, Typography, Spin } from "antd";
+import { Card, Col, Row, Statistic, Typography, Spin, Alert } from "antd";
 import {
   WalletOutlined,
   ThunderboltOutlined,
@@ -44,6 +44,26 @@ export default function DashboardPage() {
   return (
     <div>
       <Title level={3}>控制台</Title>
+
+      {data.balance <= 0 && (
+        <Alert
+          message="余额已用完 / Balance Depleted"
+          description="您的余额为 0，API Key 已被限制使用。请先充值。"
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {data.balance > 0 && data.balance < 10 && (
+        <Alert
+          message="余额不足 / Low Balance"
+          description="您的余额低于 10 元，请及时充值以避免服务中断。"
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -100,8 +120,8 @@ export default function DashboardPage() {
             />
             <YAxis />
             <Tooltip
-              formatter={(value: number) => [`¥ ${value.toFixed(2)}`, "费用"]}
-              labelFormatter={(label: string) => `日期: ${label}`}
+              formatter={(value) => [`¥ ${Number(value).toFixed(2)}`, "费用"]}
+              labelFormatter={(label) => `日期: ${String(label)}`}
             />
             <Line
               type="monotone"

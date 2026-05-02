@@ -72,3 +72,15 @@ def get_optional_user(
     if user is None or not user.is_active:
         return None
     return user
+
+
+def require_positive_balance(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Raise 402 if user balance is zero or negative."""
+    if current_user.balance <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="余额不足，请先充值 / Insufficient balance, please recharge",
+        )
+    return current_user

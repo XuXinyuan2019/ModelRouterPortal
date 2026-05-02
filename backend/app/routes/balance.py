@@ -16,6 +16,14 @@ def get_balance(current_user: User = Depends(get_current_user)):
     return BalanceResponse(balance=current_user.balance)
 
 
+@router.get("/status")
+def get_balance_status(current_user: User = Depends(get_current_user)):
+    return {
+        "balance": current_user.balance,
+        "restricted": current_user.balance <= 0,
+    }
+
+
 @router.post("/recharge", response_model=RechargeRecordResponse)
 def submit_recharge(
     req: RechargeRequest,

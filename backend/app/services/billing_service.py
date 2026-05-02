@@ -18,12 +18,14 @@ _CACHE_TTL_SECONDS = 300
 # Fallback pricing (¥ per 1M tokens, first tier) — matches Alibaba Cloud config
 _FALLBACK_PRICING: dict[str, dict[str, Any]] = {
     "qwen3.6-plus": {
+        "model_id": 1022,
         "tiers": [
             {"input_price": 2.0, "output_price": 12.0, "min_tokens": 0, "max_tokens": 256000},
             {"input_price": 8.0, "output_price": 48.0, "min_tokens": 256000, "max_tokens": 1000000},
         ],
     },
     "qwen3-max": {
+        "model_id": 1023,
         "tiers": [
             {"input_price": 2.5, "output_price": 10.0, "min_tokens": 0, "max_tokens": 32000},
             {"input_price": 4.0, "output_price": 16.0, "min_tokens": 32000, "max_tokens": 128000},
@@ -31,11 +33,13 @@ _FALLBACK_PRICING: dict[str, dict[str, Any]] = {
         ],
     },
     "kimi-k2.6": {
+        "model_id": 1028,
         "tiers": [
             {"input_price": 6.5, "output_price": 27.0, "min_tokens": 0, "max_tokens": 0},
         ],
     },
     "deepseek-v4-pro": {
+        "model_id": 1026,
         "tiers": [
             {"input_price": 12.0, "output_price": 24.0, "min_tokens": 0, "max_tokens": 0},
         ],
@@ -44,7 +48,14 @@ _FALLBACK_PRICING: dict[str, dict[str, Any]] = {
 
 
 def _parse_tier(tier: Any) -> dict[str, Any]:
-    """Parse a single pricing tier from SDK response."""
+    """Parse a single pricing tier from SDK response (dict or object)."""
+    if isinstance(tier, dict):
+        return {
+            "input_price": float(tier.get("input_price", 0) or 0),
+            "output_price": float(tier.get("output_price", 0) or 0),
+            "min_tokens": int(tier.get("min_tokens", 0) or 0),
+            "max_tokens": int(tier.get("max_tokens", 0) or 0),
+        }
     return {
         "input_price": float(getattr(tier, "input_price", 0) or 0),
         "output_price": float(getattr(tier, "output_price", 0) or 0),
@@ -88,10 +99,20 @@ def fetch_billing_rules() -> dict[str, dict[str, Any]]:
                 )
                 if not pricing_config:
                     continue
-                tiers_raw = getattr(pricing_config, "tiers", []) or []
+                # pricing_config may be a dict or an SDK object
+                if isinstance(pricing_config, dict):
+                    tiers_raw = pricing_config.get("tiers", []) or []
+                else:
+                    tiers_raw = getattr(pricing_config, "tiers", []) or []
+                if not tiers_raw:
+                    continue
                 tiers = [_parse_tier(t) for t in tiers_raw]
+                model_id_val = getattr(item, "model_id", None) or getattr(item, "modelId", None)
                 if tiers:
-                    rules[str(model_code)] = {"tiers": tiers}
+                    entry: dict[str, Any] = {"tiers": tiers}
+                    if model_id_val is not None:
+                        entry["model_id"] = int(model_id_val)
+                    rules[str(model_code)] = entry
             if rules:
                 _billing_rules_cache = rules
                 _cache_timestamp = now

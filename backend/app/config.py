@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     ALIBABA_CLOUD_ACCESS_KEY_ID: str = ""
     ALIBABA_CLOUD_ACCESS_KEY_SECRET: str = ""
     ALIBABA_ENDPOINT: str = "aicontent.cn-beijing.aliyuncs.com"
+    ALIBABA_CHAT_BASE_URL: str = "https://model-router.edu-aliyun.com/v1"
 
     SECRET_KEY: str = "change-me-to-a-random-secret-string"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours

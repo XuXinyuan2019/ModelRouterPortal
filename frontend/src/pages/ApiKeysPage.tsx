@@ -172,7 +172,7 @@ export default function ApiKeysPage() {
       <Card size="small" style={{ marginBottom: 16, background: "#f6f8fa" }}>
         <Paragraph style={{ margin: 0 }} type="secondary">
           创建 API Key 后，使用该 Key 直接调用阿里云 ModelRouter 端点。Base URL:{" "}
-          <Text code>https://aicontent.cn-beijing.aliyuncs.com/compatible-mode/v1</Text>
+          <Text code>https://model-router.edu-aliyun.com/v1</Text>
         </Paragraph>
       </Card>
 

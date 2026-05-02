@@ -23,6 +23,28 @@ class ModelUsageItem(BaseModel):
     cost: float
     tokens: int
     requests: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class ModelDetailRow(BaseModel):
+    timestamp: str
+    total_calls: int
+    all_tokens: int
+    input_tokens: int
+    output_tokens: int
+    reasoning_tokens: int
+    total_amount: float
+
+
+class ModelDetailData(BaseModel):
+    rows: list[ModelDetailRow]
+    total: int
+    page: int
+    page_size: int
+    model_id: int | None = None
+    model_name: str | None = None
+    granularity: str = "daily"
 
 
 class DashboardData(BaseModel):

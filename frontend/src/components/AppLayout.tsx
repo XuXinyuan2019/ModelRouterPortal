@@ -11,6 +11,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BookOutlined,
+  ExperimentOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -20,6 +21,7 @@ const { Header, Sider, Content } = Layout;
 const menuItems = [
   { key: "/dashboard", icon: <DashboardOutlined />, label: "控制台" },
   { key: "/models", icon: <AppstoreOutlined />, label: "模型市场" },
+  { key: "/playground", icon: <ExperimentOutlined />, label: "模型测试" },
   { key: "/api-keys", icon: <KeyOutlined />, label: "API Key" },
   { key: "/balance", icon: <WalletOutlined />, label: "余额充值" },
   { key: "/usage", icon: <BarChartOutlined />, label: "用量统计" },

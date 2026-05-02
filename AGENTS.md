@@ -81,7 +81,7 @@ def create_client() -> Client:
         access_key_id=os.environ['ALIBABA_CLOUD_ACCESS_KEY_ID'],
         access_key_secret=os.environ['ALIBABA_CLOUD_ACCESS_KEY_SECRET'],
     )
-    config.endpoint = 'aicontent.cn-beijing.aliyuncs.com'
+    config.endpoint = 'model-router.edu-aliyun.com'
     return Client(config)
 ```
 
@@ -166,7 +166,7 @@ FRONTEND_URL=http://localhost:5173
 
 ### API Key Usage
 - 用户在门户创建 API Key 后，直接用该 Key 调用阿里云 ModelRouter 端点
-- Base URL: https://aicontent.cn-beijing.aliyuncs.com
+- Base URL: https://model-router.edu-aliyun.com
 - 认证: Authorization: Bearer YOUR_API_KEY
 
 ## Frontend Routing

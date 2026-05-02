@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote:*)",
+      "Bash(gh issue:*)",
+      "Bash(cat:*)",
+      "Bash(python:*)",
+      "Bash(# Kill old server\npkill -f \"uvicorn app.main:app --port 8001\" 2>/dev/null; sleep 1\n\n# Restart\nuvicorn app.main:app --port 8001 &\nsleep 3\n\npython -c \"\nfrom app.database import SessionLocal\nfrom app.models.user import User\nfrom app.models.activation import UserModelActivation\nfrom app.utils.security import create_access_token\n\ndb = SessionLocal\\(\\)\nuser = db.query\\(User\\).filter\\(User.username == 'chattest'\\).first\\(\\)\nif not user:\n    from app.utils.security import hash_password\n    user = User\\(username='chattest', hashed_password=hash_password\\('TestPass123!'\\), balance=100.0, is_active=True, client_id=12345, client_uuid='test-uuid'\\)\n    db.add\\(user\\)\n    db.commit\\(\\)\n    db.refresh\\(user\\)\nelse:\n    user.balance = 100.0\n    db.commit\\(\\)\n\nactivation = db.query\\(UserModelActivation\\).filter\\(UserModelActivation.user_id == user.id, UserModelActivation.model_id == 'qwen3.6-plus'\\).first\\(\\)\nif not activation:\n    db.add\\(UserModelActivation\\(user_id=user.id, model_id='qwen3.6-plus', status='active'\\)\\)\n    db.commit\\(\\)\n\ntoken = create_access_token\\({'sub': str\\(user.id\\)}\\)\ndb.close\\(\\)\n\nimport httpx\nheaders = {'Authorization': f'Bearer {token}'}\nr = httpx.post\\('http://127.0.0.1:8001/api/v1/chat/completions', \n    json={'model': 'qwen3.6-plus', 'messages': [{'role': 'user', 'content': 'hello'}], 'stream': True},\n    headers=headers, timeout=30\\)\nprint\\('Status:', r.status_code\\)\nprint\\('Content-Type:', r.headers.get\\('content-type'\\)\\)\nprint\\('Body:', r.text[:2000]\\)\n\" 2>&1)",
+      "Bash(pkill:*)",
+      "WebFetch(api.aliyun.com)",
+      "Bash(cd:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}

@@ -31,7 +31,7 @@ import {
 
 const { Title, Text } = Typography;
 
-const BASE_URL = "https://aicontent.cn-beijing.aliyuncs.com";
+const BASE_URL = "https://model-router.edu-aliyun.com";
 
 function getCodeExamples(modelId: string) {
   return {
@@ -39,7 +39,7 @@ function getCodeExamples(modelId: string) {
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="${BASE_URL}/compatible-mode/v1",
+    base_url="${BASE_URL}/v1",
 )
 
 completion = client.chat.completions.create(
@@ -49,7 +49,7 @@ completion = client.chat.completions.create(
     ],
 )
 print(completion.choices[0].message.content)`,
-    curl: `curl -X POST ${BASE_URL}/compatible-mode/v1/chat/completions \\
+    curl: `curl -X POST ${BASE_URL}/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{

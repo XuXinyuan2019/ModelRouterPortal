@@ -14,6 +14,7 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import BalancePage from "./pages/BalancePage";
 import UsagePage from "./pages/UsagePage";
 import SettingsPage from "./pages/SettingsPage";
+import PlaygroundPage from "./pages/PlaygroundPage";
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/models" element={<ModelMarketPage />} />
               <Route path="/models/:modelId" element={<ModelDetailPage />} />
+              <Route path="/playground" element={<PlaygroundPage />} />
               {/* Placeholder routes for future phases */}
               <Route path="/api-keys" element={<ApiKeysPage />} />
               <Route path="/balance" element={<BalancePage />} />
